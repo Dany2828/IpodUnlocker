@@ -2,7 +2,7 @@ name: Build iPodUnlocker
 
 on:
   workflow_dispatch:        # run manually from the Actions tab
-  push:                     # or whenever you push
+  push:
   pull_request:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      # Debug: list all solution and project files so we can see what MSBuild will use
+      # Just to see what's in the repo
       - name: List solution and project files
         shell: pwsh
         run: |
@@ -28,15 +28,16 @@ jobs:
           Write-Host "`n=== project files ==="
           Get-ChildItem -Recurse -Include *.csproj,*.vbproj,*.vcproj | Select-Object FullName
 
-      # Debug: show the first lines of the solution to catch corruption
-      - name: Show first lines of solution file
+      # Build the first project it finds (no need to name iPodUnlocker.sln here)
+      - name: Build project (auto-detect)
         shell: pwsh
         run: |
-          Write-Host "=== iPodUnlocker.sln (first 40 lines) ==="
-          Get-Content "iPodUnlocker.sln" -First 40
-
-      - name: Build solution
-        run: msbuild iPodUnlocker.sln /p:Configuration=Release /v:detailed
+          $proj = Get-ChildItem -Recurse -Include *.csproj,*.vbproj,*.vcproj | Select-Object -First 1
+          if (-not $proj) {
+            throw "No project file (*.csproj, *.vbproj, *.vcproj) found in the repository."
+          }
+          Write-Host "Building project: $($proj.FullName)"
+          msbuild $proj.FullName /p:Configuration=Release /v:detailed
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

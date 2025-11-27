@@ -1,0 +1,46 @@
+name: Build iPodUnlocker
+
+on:
+  workflow_dispatch:        # run manually from the Actions tab
+  push:                     # or whenever you push
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable .NET Framework 3.5
+        run: dism /online /enable-feature /featurename:NetFX3 /all
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # Debug: list all solution and project files so we can see what MSBuild will use
+      - name: List solution and project files
+        shell: pwsh
+        run: |
+          Write-Host "=== .sln files ==="
+          Get-ChildItem -Recurse -Include *.sln | Select-Object FullName
+          Write-Host "`n=== project files ==="
+          Get-ChildItem -Recurse -Include *.csproj,*.vbproj,*.vcproj | Select-Object FullName
+
+      # Debug: show the first lines of the solution to catch corruption
+      - name: Show first lines of solution file
+        shell: pwsh
+        run: |
+          Write-Host "=== iPodUnlocker.sln (first 40 lines) ==="
+          Get-Content "iPodUnlocker.sln" -First 40
+
+      - name: Build solution
+        run: msbuild iPodUnlocker.sln /p:Configuration=Release /v:detailed
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: iPodUnlocker-build
+          path: |
+            **/bin/**
